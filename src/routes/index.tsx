@@ -185,6 +185,7 @@ function Index() {
         sub,
         e.accountingType,
         e.mobile,
+        e.notes,
       ];
       return { e, cells };
     });
@@ -512,7 +513,7 @@ function EntriesTable({
   onDone?: (e: Entry) => void;
   onRestore?: (e: Entry) => void;
 }) {
-  const headers = ["مسلسل", "الاسم", "العنوان", "رقم البطاقة", "رقم الاشتراك", "نوع المحاسبة", "رقم الموبايل"];
+  const headers = ["مسلسل", "الاسم", "العنوان", "رقم البطاقة", "رقم الاشتراك", "نوع المحاسبة", "رقم الموبايل", "ملاحظات"];
   if (!rows.length) {
     return <p className="text-center text-muted-foreground py-8">لا توجد بيانات</p>;
   }
