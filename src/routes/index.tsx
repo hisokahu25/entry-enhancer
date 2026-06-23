@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast, Toaster } from "sonner";
-import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2 } from "lucide-react";
+import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2, Settings as SettingsIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,6 +53,12 @@ interface Entry {
 
 const STORAGE = "subscribers_v1";
 const STORAGE_DONE = "subscribers_done_v1";
+const STORAGE_SETTINGS = "subscribers_settings_v1";
+
+interface Settings {
+  autoNavigateAfterSubmit: boolean;
+}
+const defaultSettings: Settings = { autoNavigateAfterSubmit: false };
 
 const emptyEntry = (): Entry => ({
   id: crypto.randomUUID(),
@@ -93,13 +100,16 @@ function Index() {
   const [form, setForm] = useState<Entry>(emptyEntry);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tab, setTab] = useState("entry");
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
 
   useEffect(() => {
     try {
       const a = localStorage.getItem(STORAGE);
       const b = localStorage.getItem(STORAGE_DONE);
+      const s = localStorage.getItem(STORAGE_SETTINGS);
       if (a) setEntries(JSON.parse(a));
       if (b) setDone(JSON.parse(b));
+      if (s) setSettings({ ...defaultSettings, ...JSON.parse(s) });
     } catch {}
   }, []);
 
@@ -109,6 +119,9 @@ function Index() {
   useEffect(() => {
     localStorage.setItem(STORAGE_DONE, JSON.stringify(done));
   }, [done]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings));
+  }, [settings]);
 
   const sewageAuto = useMemo(() => computeSewage(form.address), [form.address]);
   useEffect(() => {
@@ -128,12 +141,15 @@ function Index() {
       setEntries((arr) => arr.map((e) => (e.id === editingId ? { ...form, id: editingId } : e)));
       toast.success("تم تعديل البيانات");
       setEditingId(null);
+      setForm(emptyEntry());
+      setTab("entries");
+      return;
     } else {
       setEntries((arr) => [...arr, { ...form, id: crypto.randomUUID() }]);
       toast.success("تم ترحيل البيانات");
     }
     setForm(emptyEntry());
-    setTab("entries");
+    if (settings.autoNavigateAfterSubmit) setTab("entries");
   };
 
   const handleEdit = (e: Entry) => {
@@ -173,36 +189,74 @@ function Index() {
       return { e, cells };
     });
 
-  const exportExcel = async () => {
+  const exportExcel = async (list: Entry[], filename: string) => {
     const XLSX = await import("xlsx");
-    const rows = entries.map((e, i) => ({
+    const rows = list.map((e, i) => ({
       "مسلسل": i + 1,
       "الاسم": e.name,
       "العنوان": e.address,
       "رقم البطاقة": e.cardNumber,
+      "الفرع": e.branch,
+      "رقم الحساب": e.accountNumber,
       "رقم الاشتراك": buildSubscription(e.branch, e.accountNumber),
+      "الخضوع للصرف": e.sewage,
+      "عدد الوحدات": e.units,
+      "تاريخ فتح العداد": e.meterOpenDate,
       "نوع المحاسبة": e.accountingType,
+      "رقم البرونز": e.bronzeNumber,
+      "تاريخ التركيب": e.installDate,
       "رقم الموبايل": e.mobile,
+      "السباك": e.plumber,
+      "رقم القسيمة": e.couponNumber,
+      "بند مبلغ القسيمة": e.couponAmount,
+      "ملاحظات": e.notes,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "المدخلات");
-    XLSX.writeFile(wb, "المدخلات.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, filename);
+    XLSX.writeFile(wb, `${filename}.xlsx`);
   };
 
-  const exportPdf = async () => {
-    const { default: jsPDF } = await import("jspdf");
-    const autoTable = (await import("jspdf-autotable")).default;
-    const doc = new jsPDF();
-    autoTable(doc, {
-      head: [["#", "Name", "Address", "Card", "Subscription", "Type", "Mobile"]],
-      body: entries.map((e, i) => [
-        i + 1, e.name, e.address, e.cardNumber,
-        buildSubscription(e.branch, e.accountNumber),
-        e.accountingType, e.mobile,
-      ]),
-    });
-    doc.save("entries.pdf");
+  const exportPdf = (list: Entry[], title: string) => {
+    const w = window.open("", "_blank");
+    if (!w) return toast.error("افتح النوافذ المنبثقة لإتمام التصدير");
+    const rows = list.map((e, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${esc(e.name)}</td>
+        <td>${esc(e.address)}</td>
+        <td>${esc(e.cardNumber)}</td>
+        <td>${esc(buildSubscription(e.branch, e.accountNumber))}</td>
+        <td>${esc(e.accountingType)}</td>
+        <td>${esc(e.mobile)}</td>
+        <td>${esc(e.sewage)}</td>
+        <td>${esc(e.units)}</td>
+        <td>${esc(e.meterOpenDate)}</td>
+        <td>${esc(e.bronzeNumber)}</td>
+        <td>${esc(e.installDate)}</td>
+        <td>${esc(e.plumber)}</td>
+        <td>${esc(e.couponNumber)}</td>
+        <td>${esc(e.couponAmount)}</td>
+        <td>${esc(e.notes)}</td>
+      </tr>`).join("");
+    w.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title}</title>
+      <style>
+        body{font-family:"Segoe UI","Tahoma",Arial,sans-serif;direction:rtl;padding:16px;}
+        h1{font-size:18px;margin:0 0 12px;}
+        table{width:100%;border-collapse:collapse;font-size:11px;}
+        th,td{border:1px solid #333;padding:4px 6px;text-align:right;vertical-align:top;}
+        th{background:#eee;}
+        @media print{@page{size:A4 landscape;margin:10mm;}}
+      </style></head><body>
+      <h1>${title}</h1>
+      <table><thead><tr>
+        <th>م</th><th>الاسم</th><th>العنوان</th><th>رقم البطاقة</th><th>رقم الاشتراك</th>
+        <th>نوع المحاسبة</th><th>الموبايل</th><th>الصرف</th><th>الوحدات</th><th>فتح العداد</th>
+        <th>البرونز</th><th>التركيب</th><th>السباك</th><th>القسيمة</th><th>المبلغ</th><th>ملاحظات</th>
+      </tr></thead><tbody>${rows}</tbody></table>
+      <script>window.onload=()=>{setTimeout(()=>window.print(),300);}</script>
+      </body></html>`);
+    w.document.close();
   };
 
   return (
@@ -318,10 +372,10 @@ function Index() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>المدخلات</CardTitle>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={exportExcel} disabled={!entries.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportExcel(entries, "المدخلات")} disabled={!entries.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
-                  <Button variant="outline" size="sm" onClick={exportPdf} disabled={!entries.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportPdf(entries, "المدخلات")} disabled={!entries.length}>
                     <FileDown className="ms-1 h-4 w-4" /> PDF
                   </Button>
                 </div>
@@ -339,18 +393,102 @@ function Index() {
 
           <TabsContent value="done">
             <Card>
-              <CardHeader><CardTitle>تم الانتهاء منه</CardTitle></CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>تم الانتهاء منه</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => exportExcel(done, "تم_الانتهاء")} disabled={!done.length}>
+                    <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportPdf(done, "تم الانتهاء")} disabled={!done.length}>
+                    <FileDown className="ms-1 h-4 w-4" /> PDF
+                  </Button>
+                </div>
+              </CardHeader>
               <CardContent>
-                <EntriesTable
-                  rows={tableRows(done)}
-                  onCopy={copyCell}
-                  onRestore={restoreFromDone}
-                />
+                <DoneList items={done} onCopy={copyCell} onRestore={restoreFromDone} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader><CardTitle>الإعدادات</CardTitle></CardHeader>
+              <CardContent className="space-y-4" dir="rtl">
+                <div className="flex items-center justify-between rounded-md border p-4">
+                  <div className="space-y-1 text-right">
+                    <Label className="text-base">الانتقال التلقائي لتاب المدخلات بعد الترحيل</Label>
+                    <p className="text-sm text-muted-foreground">
+                      عند الإيقاف: يتم إظهار رسالة "تم الترحيل" والبقاء في شاشة الإدخال.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.autoNavigateAfterSubmit}
+                    onCheckedChange={(v) => setSettings((s) => ({ ...s, autoNavigateAfterSubmit: v }))}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+    </div>
+  );
+}
+
+function esc(s: string): string {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+}
+
+function DoneList({ items, onCopy, onRestore }: { items: Entry[]; onCopy: (v: string) => void; onRestore: (e: Entry) => void }) {
+  if (!items.length) return <p className="text-center text-muted-foreground py-8">لا توجد بيانات</p>;
+  const fields: { label: string; get: (e: Entry) => string }[] = [
+    { label: "الاسم", get: (e) => e.name },
+    { label: "رقم البطاقة", get: (e) => e.cardNumber },
+    { label: "العنوان", get: (e) => e.address },
+    { label: "الفرع", get: (e) => e.branch },
+    { label: "رقم الحساب", get: (e) => e.accountNumber },
+    { label: "رقم الاشتراك", get: (e) => buildSubscription(e.branch, e.accountNumber) },
+    { label: "الخضوع للصرف", get: (e) => e.sewage },
+    { label: "عدد الوحدات", get: (e) => e.units },
+    { label: "تاريخ فتح العداد", get: (e) => e.meterOpenDate },
+    { label: "نوع المحاسبة", get: (e) => e.accountingType },
+    { label: "رقم البرونز", get: (e) => e.bronzeNumber },
+    { label: "تاريخ التركيب", get: (e) => e.installDate },
+    { label: "رقم الموبايل", get: (e) => e.mobile },
+    { label: "السباك", get: (e) => e.plumber },
+    { label: "رقم القسيمة", get: (e) => e.couponNumber },
+    { label: "بند مبلغ القسيمة", get: (e) => e.couponAmount },
+    { label: "ملاحظات", get: (e) => e.notes },
+  ];
+  return (
+    <div dir="rtl" className="space-y-4">
+      {items.map((e, idx) => (
+        <div key={e.id} className="rounded-md border p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold">#{idx + 1} — {e.name || "(بدون اسم)"}</div>
+            <Button size="sm" variant="outline" onClick={() => onRestore(e)}>
+              <Undo2 className="h-3 w-3 ms-1" /> إرجاع
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-right">
+            {fields.map((f) => {
+              const v = f.get(e);
+              return (
+                <div key={f.label} className="text-sm">
+                  <div className="text-muted-foreground text-xs mb-0.5">{f.label}</div>
+                  <div
+                    className="cursor-pointer hover:bg-accent rounded px-1 py-0.5 break-words"
+                    title="اضغط للنسخ"
+                    onClick={() => v && onCopy(v)}
+                  >
+                    {v || <span className="text-muted-foreground">—</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
