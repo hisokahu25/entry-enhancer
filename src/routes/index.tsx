@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast, Toaster } from "sonner";
-import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2 } from "lucide-react";
+import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -152,6 +152,12 @@ function Index() {
     toast.success("تم الانتهاء من السطر");
   };
 
+  const restoreFromDone = (e: Entry) => {
+    setEntries((arr) => [...arr, e]);
+    setDone((d) => d.filter((x) => x.id !== e.id));
+    toast.success("تم إرجاع السطر للمدخلات");
+  };
+
   const tableRows = (list: Entry[]) =>
     list.map((e, i) => {
       const sub = buildSubscription(e.branch, e.accountNumber);
@@ -224,7 +230,12 @@ function Index() {
                   <Input value={form.name} onChange={(e) => update("name", e.target.value)} />
                 </Field>
                 <Field label="رقم البطاقة">
-                  <Input value={form.cardNumber} onChange={(e) => update("cardNumber", e.target.value)} />
+                  <Input
+                    value={form.cardNumber}
+                    onChange={(e) => update("cardNumber", e.target.value.replace(/\D/g, "").slice(0, 14))}
+                    inputMode="numeric"
+                    maxLength={14}
+                  />
                 </Field>
                 <Field label="العنوان">
                   <Input value={form.address} onChange={(e) => update("address", e.target.value)} />
@@ -333,6 +344,7 @@ function Index() {
                 <EntriesTable
                   rows={tableRows(done)}
                   onCopy={copyCell}
+                  onRestore={restoreFromDone}
                 />
               </CardContent>
             </Card>
@@ -353,20 +365,21 @@ function Field({ label, children, className = "" }: { label: string; children: R
 }
 
 function EntriesTable({
-  rows, onCopy, onEdit, onDone,
+  rows, onCopy, onEdit, onDone, onRestore,
 }: {
   rows: { e: Entry; cells: string[] }[];
   onCopy: (v: string) => void;
   onEdit?: (e: Entry) => void;
   onDone?: (e: Entry) => void;
+  onRestore?: (e: Entry) => void;
 }) {
   const headers = ["مسلسل", "الاسم", "العنوان", "رقم البطاقة", "رقم الاشتراك", "نوع المحاسبة", "رقم الموبايل"];
   if (!rows.length) {
     return <p className="text-center text-muted-foreground py-8">لا توجد بيانات</p>;
   }
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <div className="overflow-x-auto" dir="rtl">
+      <Table dir="rtl">
         <TableHeader>
           <TableRow>
             {headers.map((h) => <TableHead key={h} className="text-right">{h}</TableHead>)}
@@ -380,7 +393,7 @@ function EntriesTable({
                 <TableCell
                   key={i}
                   onClick={() => c && onCopy(c)}
-                  className="cursor-pointer hover:bg-accent group"
+                  className="cursor-pointer hover:bg-accent group text-right align-top"
                   title="اضغط للنسخ"
                 >
                   <span className="inline-flex items-center gap-1">
@@ -389,7 +402,7 @@ function EntriesTable({
                   </span>
                 </TableCell>
               ))}
-              <TableCell>
+              <TableCell className="text-right align-top">
                 <div className="flex gap-1">
                   {onEdit && (
                     <Button size="sm" variant="outline" onClick={() => onEdit(e)}>
@@ -399,6 +412,11 @@ function EntriesTable({
                   {onDone && (
                     <Button size="sm" variant="outline" onClick={() => onDone(e)}>
                       <CheckCircle2 className="h-3 w-3 ms-1" /> تم
+                    </Button>
+                  )}
+                  {onRestore && (
+                    <Button size="sm" variant="outline" onClick={() => onRestore(e)}>
+                      <Undo2 className="h-3 w-3 ms-1" /> إرجاع
                     </Button>
                   )}
                 </div>
