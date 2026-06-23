@@ -225,7 +225,7 @@ function Index() {
               <CardHeader>
                 <CardTitle>{editingId ? "تعديل بيانات مشترك" : "إدخال بيانات مشترك"}</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <CardContent dir="rtl" className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 text-right">
                 <Field label="الاسم">
                   <Input value={form.name} onChange={(e) => update("name", e.target.value)} />
                 </Field>
