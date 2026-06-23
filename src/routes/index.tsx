@@ -225,7 +225,7 @@ function Index() {
               <CardHeader>
                 <CardTitle>{editingId ? "تعديل بيانات مشترك" : "إدخال بيانات مشترك"}</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <CardContent dir="rtl" className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 text-right">
                 <Field label="الاسم">
                   <Input value={form.name} onChange={(e) => update("name", e.target.value)} />
                 </Field>
@@ -357,8 +357,8 @@ function Index() {
 
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`space-y-1.5 ${className}`}>
-      <Label className="text-sm">{label}</Label>
+    <div dir="rtl" className={`space-y-1.5 text-right ${className}`}>
+      <Label className="text-sm block text-right">{label}</Label>
       {children}
     </div>
   );
