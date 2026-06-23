@@ -268,10 +268,11 @@ function Index() {
         </h1>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="entry">الإدخال</TabsTrigger>
             <TabsTrigger value="entries">المدخلات ({entries.length})</TabsTrigger>
             <TabsTrigger value="done">تم الانتهاء ({done.length})</TabsTrigger>
+            <TabsTrigger value="settings"><SettingsIcon className="h-4 w-4 ms-1" />الإعدادات</TabsTrigger>
           </TabsList>
 
           <TabsContent value="entry">
@@ -307,7 +308,7 @@ function Index() {
                   <Input type="number" value={form.units} onChange={(e) => update("units", e.target.value)} />
                 </Field>
                 <Field label="تاريخ فتح العداد">
-                  <Input value={form.meterOpenDate} onChange={(e) => update("meterOpenDate", e.target.value)} placeholder="يدوي" />
+                  <Input type="date" value={form.meterOpenDate} onChange={(e) => update("meterOpenDate", e.target.value)} />
                 </Field>
                 <Field label="نوع المحاسبة">
                   <Select value={form.accountingType} onValueChange={(v) => update("accountingType", v as AccountingType)}>
@@ -325,7 +326,7 @@ function Index() {
                   <Input value={form.bronzeNumber} onChange={(e) => update("bronzeNumber", e.target.value)} />
                 </Field>
                 <Field label="تاريخ التركيب">
-                  <Input value={form.installDate} onChange={(e) => update("installDate", e.target.value)} placeholder="يدوي" />
+                  <Input type="date" value={form.installDate} onChange={(e) => update("installDate", e.target.value)} />
                 </Field>
                 <Field label="رقم الموبايل (11 رقم)">
                   <Input
