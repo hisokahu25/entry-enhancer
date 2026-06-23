@@ -224,7 +224,12 @@ function Index() {
                   <Input value={form.name} onChange={(e) => update("name", e.target.value)} />
                 </Field>
                 <Field label="رقم البطاقة">
-                  <Input value={form.cardNumber} onChange={(e) => update("cardNumber", e.target.value)} />
+                  <Input
+                    value={form.cardNumber}
+                    onChange={(e) => update("cardNumber", e.target.value.replace(/\D/g, "").slice(0, 14))}
+                    inputMode="numeric"
+                    maxLength={14}
+                  />
                 </Field>
                 <Field label="العنوان">
                   <Input value={form.address} onChange={(e) => update("address", e.target.value)} />
