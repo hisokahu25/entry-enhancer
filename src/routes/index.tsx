@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast, Toaster } from "sonner";
-import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2 } from "lucide-react";
+import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -150,6 +150,12 @@ function Index() {
     setDone((d) => [...d, e]);
     setEntries((arr) => arr.filter((x) => x.id !== e.id));
     toast.success("تم الانتهاء من السطر");
+  };
+
+  const restoreFromDone = (e: Entry) => {
+    setEntries((arr) => [...arr, e]);
+    setDone((d) => d.filter((x) => x.id !== e.id));
+    toast.success("تم إرجاع السطر للمدخلات");
   };
 
   const tableRows = (list: Entry[]) =>
@@ -338,6 +344,7 @@ function Index() {
                 <EntriesTable
                   rows={tableRows(done)}
                   onCopy={copyCell}
+                  onRestore={restoreFromDone}
                 />
               </CardContent>
             </Card>
