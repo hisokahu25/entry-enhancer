@@ -357,8 +357,8 @@ function Index() {
 
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`space-y-1.5 ${className}`}>
-      <Label className="text-sm">{label}</Label>
+    <div dir="rtl" className={`space-y-1.5 text-right ${className}`}>
+      <Label className="text-sm block text-right">{label}</Label>
       {children}
     </div>
   );
