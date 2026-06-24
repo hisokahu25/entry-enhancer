@@ -270,10 +270,10 @@ function Index() {
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="entry">الإدخال</TabsTrigger>
-            <TabsTrigger value="entries">المدخلات ({entries.length})</TabsTrigger>
-            <TabsTrigger value="done">تم الانتهاء ({done.length})</TabsTrigger>
             <TabsTrigger value="settings"><SettingsIcon className="h-4 w-4 ms-1" />الإعدادات</TabsTrigger>
+            <TabsTrigger value="done">تم الانتهاء ({done.length})</TabsTrigger>
+            <TabsTrigger value="entries">المدخلات ({entries.length})</TabsTrigger>
+            <TabsTrigger value="entry">الإدخال</TabsTrigger>
           </TabsList>
 
           <TabsContent value="entry">
