@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast, Toaster } from "sonner";
-import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2, Settings as SettingsIcon } from "lucide-react";
+import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2, Settings as SettingsIcon, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/")({
@@ -101,6 +101,8 @@ function Index() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tab, setTab] = useState("entry");
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [searchEntries, setSearchEntries] = useState("");
+  const [searchDone, setSearchDone] = useState("");
 
   useEffect(() => {
     try {
@@ -124,6 +126,36 @@ function Index() {
   }, [settings]);
 
   const sewageAuto = useMemo(() => computeSewage(form.address), [form.address]);
+
+  const filteredEntries = useMemo(() => {
+    const q = searchEntries.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter((e) =>
+      e.name.toLowerCase().includes(q) ||
+      e.address.toLowerCase().includes(q) ||
+      e.cardNumber.includes(q) ||
+      e.branch.includes(q) ||
+      e.accountNumber.includes(q) ||
+      e.mobile.includes(q) ||
+      e.accountingType.toLowerCase().includes(q) ||
+      e.notes.toLowerCase().includes(q)
+    );
+  }, [entries, searchEntries]);
+
+  const filteredDone = useMemo(() => {
+    const q = searchDone.trim().toLowerCase();
+    if (!q) return done;
+    return done.filter((e) =>
+      e.name.toLowerCase().includes(q) ||
+      e.address.toLowerCase().includes(q) ||
+      e.cardNumber.includes(q) ||
+      e.branch.includes(q) ||
+      e.accountNumber.includes(q) ||
+      e.mobile.includes(q) ||
+      e.accountingType.toLowerCase().includes(q) ||
+      e.notes.toLowerCase().includes(q)
+    );
+  }, [done, searchDone]);
   useEffect(() => {
     setForm((f) => ({ ...f, sewage: computeSewage(f.address) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -371,20 +403,29 @@ function Index() {
 
           <TabsContent value="entries">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
                 <CardTitle>المدخلات</CardTitle>
+                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input
+                    placeholder="بحث في المدخلات..."
+                    value={searchEntries}
+                    onChange={(e) => setSearchEntries(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => exportExcel(entries, "المدخلات")} disabled={!entries.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportExcel(filteredEntries, "المدخلات")} disabled={!filteredEntries.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => exportPdf(entries, "المدخلات")} disabled={!entries.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportPdf(filteredEntries, "المدخلات")} disabled={!filteredEntries.length}>
                     <FileDown className="ms-1 h-4 w-4" /> PDF
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <EntriesTable
-                  rows={tableRows(entries)}
+                  rows={tableRows(filteredEntries)}
                   onCopy={copyCell}
                   onEdit={handleEdit}
                   onDone={moveToDone}
@@ -395,19 +436,28 @@ function Index() {
 
           <TabsContent value="done">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
                 <CardTitle>تم الانتهاء منه</CardTitle>
+                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input
+                    placeholder="بحث في المنتهي..."
+                    value={searchDone}
+                    onChange={(e) => setSearchDone(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => exportExcel(done, "تم_الانتهاء")} disabled={!done.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportExcel(filteredDone, "تم_الانتهاء")} disabled={!filteredDone.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => exportPdf(done, "تم الانتهاء")} disabled={!done.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportPdf(filteredDone, "تم الانتهاء")} disabled={!filteredDone.length}>
                     <FileDown className="ms-1 h-4 w-4" /> PDF
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <DoneList items={done} onCopy={copyCell} onRestore={restoreFromDone} />
+                <DoneList items={filteredDone} onCopy={copyCell} onRestore={restoreFromDone} />
               </CardContent>
             </Card>
           </TabsContent>
