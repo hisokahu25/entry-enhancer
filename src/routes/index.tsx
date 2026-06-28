@@ -436,19 +436,28 @@ function Index() {
 
           <TabsContent value="done">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
                 <CardTitle>تم الانتهاء منه</CardTitle>
+                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input
+                    placeholder="بحث في المنتهي..."
+                    value={searchDone}
+                    onChange={(e) => setSearchDone(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => exportExcel(done, "تم_الانتهاء")} disabled={!done.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportExcel(filteredDone, "تم_الانتهاء")} disabled={!filteredDone.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => exportPdf(done, "تم الانتهاء")} disabled={!done.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportPdf(filteredDone, "تم الانتهاء")} disabled={!filteredDone.length}>
                     <FileDown className="ms-1 h-4 w-4" /> PDF
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <DoneList items={done} onCopy={copyCell} onRestore={restoreFromDone} />
+                <DoneList items={filteredDone} onCopy={copyCell} onRestore={restoreFromDone} />
               </CardContent>
             </Card>
           </TabsContent>
