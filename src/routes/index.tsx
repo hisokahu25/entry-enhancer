@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast, Toaster } from "sonner";
-import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2, Settings as SettingsIcon } from "lucide-react";
+import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2, Settings as SettingsIcon, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/")({
