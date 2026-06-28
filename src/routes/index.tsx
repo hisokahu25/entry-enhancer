@@ -126,6 +126,36 @@ function Index() {
   }, [settings]);
 
   const sewageAuto = useMemo(() => computeSewage(form.address), [form.address]);
+
+  const filteredEntries = useMemo(() => {
+    const q = searchEntries.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter((e) =>
+      e.name.toLowerCase().includes(q) ||
+      e.address.toLowerCase().includes(q) ||
+      e.cardNumber.includes(q) ||
+      e.branch.includes(q) ||
+      e.accountNumber.includes(q) ||
+      e.mobile.includes(q) ||
+      e.accountingType.toLowerCase().includes(q) ||
+      e.notes.toLowerCase().includes(q)
+    );
+  }, [entries, searchEntries]);
+
+  const filteredDone = useMemo(() => {
+    const q = searchDone.trim().toLowerCase();
+    if (!q) return done;
+    return done.filter((e) =>
+      e.name.toLowerCase().includes(q) ||
+      e.address.toLowerCase().includes(q) ||
+      e.cardNumber.includes(q) ||
+      e.branch.includes(q) ||
+      e.accountNumber.includes(q) ||
+      e.mobile.includes(q) ||
+      e.accountingType.toLowerCase().includes(q) ||
+      e.notes.toLowerCase().includes(q)
+    );
+  }, [done, searchDone]);
   useEffect(() => {
     setForm((f) => ({ ...f, sewage: computeSewage(f.address) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
