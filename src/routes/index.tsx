@@ -101,6 +101,8 @@ function Index() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tab, setTab] = useState("entry");
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [searchEntries, setSearchEntries] = useState("");
+  const [searchDone, setSearchDone] = useState("");
 
   useEffect(() => {
     try {
