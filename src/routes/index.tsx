@@ -403,20 +403,29 @@ function Index() {
 
           <TabsContent value="entries">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
                 <CardTitle>المدخلات</CardTitle>
+                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input
+                    placeholder="بحث في المدخلات..."
+                    value={searchEntries}
+                    onChange={(e) => setSearchEntries(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => exportExcel(entries, "المدخلات")} disabled={!entries.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportExcel(filteredEntries, "المدخلات")} disabled={!filteredEntries.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => exportPdf(entries, "المدخلات")} disabled={!entries.length}>
+                  <Button variant="outline" size="sm" onClick={() => exportPdf(filteredEntries, "المدخلات")} disabled={!filteredEntries.length}>
                     <FileDown className="ms-1 h-4 w-4" /> PDF
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <EntriesTable
-                  rows={tableRows(entries)}
+                  rows={tableRows(filteredEntries)}
                   onCopy={copyCell}
                   onEdit={handleEdit}
                   onDone={moveToDone}
