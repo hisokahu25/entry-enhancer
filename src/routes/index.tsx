@@ -122,6 +122,8 @@ function Index() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [searchEntries, setSearchEntries] = useState("");
   const [searchDone, setSearchDone] = useState("");
+  const [branchManual, setBranchManual] = useState(false);
+  const [plumberMode, setPlumberMode] = useState<"known" | "other">("known");
 
   useEffect(() => {
     try {
@@ -145,6 +147,13 @@ function Index() {
   }, [settings]);
 
   const sewageAuto = useMemo(() => computeSewage(form.address), [form.address]);
+  const branchAuto = useMemo(() => computeBranch(form.address), [form.address]);
+
+  const duplicateAccount = useMemo(() => {
+    const acc = form.accountNumber.trim();
+    if (!acc) return false;
+    return [...entries, ...done].some((e) => e.accountNumber.trim() === acc && e.id !== editingId);
+  }, [form.accountNumber, entries, done, editingId]);
 
   const filteredEntries = useMemo(() => {
     const q = searchEntries.trim().toLowerCase();
@@ -180,6 +189,12 @@ function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.address]);
 
+  useEffect(() => {
+    if (branchManual) return;
+    const b = computeBranch(form.address);
+    if (b) setForm((f) => (f.branch === b ? f : { ...f, branch: b }));
+  }, [form.address, branchManual]);
+
   const update = <K extends keyof Entry>(k: K, v: Entry[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
@@ -193,6 +208,8 @@ function Index() {
       toast.success("تم تعديل البيانات");
       setEditingId(null);
       setForm(emptyEntry());
+      setBranchManual(false);
+      setPlumberMode("known");
       setTab("entries");
       return;
     } else {
@@ -200,12 +217,16 @@ function Index() {
       toast.success("تم ترحيل البيانات");
     }
     setForm(emptyEntry());
+    setBranchManual(false);
+    setPlumberMode("known");
     if (settings.autoNavigateAfterSubmit) setTab("entries");
   };
 
   const handleEdit = (e: Entry) => {
     setForm(e);
     setEditingId(e.id);
+    setBranchManual(true);
+    setPlumberMode((KNOWN_PLUMBERS as readonly string[]).includes(e.plumber) ? "known" : "other");
     setTab("entry");
   };
 
@@ -223,6 +244,54 @@ function Index() {
     setEntries((arr) => [...arr, e]);
     setDone((d) => d.filter((x) => x.id !== e.id));
     toast.success("تم إرجاع السطر للمدخلات");
+  };
+
+  const importExcel = async (file: File) => {
+    try {
+      const XLSX = await import("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+      const pick = (r: Record<string, any>, keys: string[]) => {
+        for (const k of keys) {
+          const found = Object.keys(r).find((rk) => rk.trim() === k);
+          if (found && r[found] !== undefined && r[found] !== null && r[found] !== "") return String(r[found]);
+        }
+        return "";
+      };
+      const valid: AccountingType[] = ["منزلي","تجاري","حكومي","كبار مشتركين","أخرى"];
+      const imported: Entry[] = rows.map((r) => {
+        const address = pick(r, ["العنوان"]);
+        const branch = pick(r, ["الفرع"]) || computeBranch(address);
+        const accType = pick(r, ["نوع المحاسبة"]) as AccountingType;
+        return {
+          id: crypto.randomUUID(),
+          name: pick(r, ["الاسم"]),
+          cardNumber: pick(r, ["رقم البطاقة", "رقم البطاقه"]),
+          address,
+          branch,
+          accountNumber: pick(r, ["رقم الحساب"]),
+          sewage: pick(r, ["الخضوع للصرف"]) || computeSewage(address),
+          units: pick(r, ["عدد الوحدات"]) || "1",
+          meterOpenDate: pick(r, ["تاريخ فتح العداد"]),
+          accountingType: valid.includes(accType) ? accType : "أخرى",
+          bronzeNumber: pick(r, ["رقم البرونز"]),
+          installDate: pick(r, ["تاريخ التركيب"]),
+          mobile: pick(r, ["رقم الموبايل", "الموبايل"]),
+          plumber: pick(r, ["السباك"]) || "الجميل",
+          couponNumber: pick(r, ["رقم القسيمة"]) || "0",
+          couponAmount: pick(r, ["بند مبلغ القسيمة", "مبلغ القسيمة"]) || "0",
+          notes: pick(r, ["ملاحظات"]),
+        };
+      }).filter((e) => e.name || e.accountNumber || e.cardNumber);
+      if (!imported.length) return toast.error("لم يتم العثور على بيانات");
+      setEntries((arr) => [...arr, ...imported]);
+      toast.success(`تم استيراد ${imported.length} سجل`);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل استيراد الملف");
+    }
   };
 
   const tableRows = (list: Entry[]) =>
