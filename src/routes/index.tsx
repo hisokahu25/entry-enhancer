@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
 });
 
 type AccountingType = "منزلي" | "تجاري" | "حكومي" | "كبار مشتركين" | "أخرى";
-type Plumber = "الجميل" | "ابوزيد";
+const KNOWN_PLUMBERS = ["الجميل", "ابوزيد"] as const;
 
 interface Entry {
   id: string;
@@ -45,7 +45,7 @@ interface Entry {
   bronzeNumber: string;
   installDate: string;
   mobile: string;
-  plumber: Plumber;
+  plumber: string;
   couponNumber: string;
   couponAmount: string;
   notes: string;
@@ -60,6 +60,25 @@ interface Settings {
 }
 const defaultSettings: Settings = { autoNavigateAfterSubmit: false };
 
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+const BRANCH_RULES: { branch: string; keywords: string[] }[] = [
+  { branch: "1", keywords: ["اسكان الشباب", "إسكان الشباب", "المروة", "المروه", "شجرة الدر", "شجره الدر", "بن لقمان", "موتيلات بن لقمان", "صلاح الدين"] },
+  { branch: "2", keywords: ["الصفا", "الاندلس", "الأندلس", "امون", "آمون", "أمون", "الفردوس", "جزيرة الورد", "جزيره الورد"] },
+  { branch: "3", keywords: ["الكرنك", "ابوسمبل", "أبوسمبل", "ابو سمبل", "ايزيس", "إيزيس", "جمصة 1", "جمصة 2", "جمصة 3", "جمصة 4", "جمصة1", "جمصة2", "جمصة3", "جمصة4", "جمصه 1", "جمصه 2", "جمصه 3", "جمصه 4"] },
+  { branch: "4", keywords: ["مايو", "البستان", "الياسمين", "العاشر", "النقابات", "القرية السياحية", "القريه السياحيه"] },
+  { branch: "5", keywords: ["زايد"] },
+];
+
+function computeBranch(address: string): string {
+  const a = (address || "").trim();
+  if (!a) return "";
+  for (const rule of BRANCH_RULES) {
+    if (rule.keywords.some((k) => a.includes(k))) return rule.branch;
+  }
+  return "";
+}
+
 const emptyEntry = (): Entry => ({
   id: crypto.randomUUID(),
   name: "",
@@ -72,7 +91,7 @@ const emptyEntry = (): Entry => ({
   meterOpenDate: "",
   accountingType: "أخرى",
   bronzeNumber: "",
-  installDate: "",
+  installDate: todayISO(),
   mobile: "",
   plumber: "الجميل",
   couponNumber: "0",
@@ -103,6 +122,8 @@ function Index() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [searchEntries, setSearchEntries] = useState("");
   const [searchDone, setSearchDone] = useState("");
+  const [branchManual, setBranchManual] = useState(false);
+  const [plumberMode, setPlumberMode] = useState<"known" | "other">("known");
 
   useEffect(() => {
     try {
@@ -126,6 +147,13 @@ function Index() {
   }, [settings]);
 
   const sewageAuto = useMemo(() => computeSewage(form.address), [form.address]);
+  const branchAuto = useMemo(() => computeBranch(form.address), [form.address]);
+
+  const duplicateAccount = useMemo(() => {
+    const acc = form.accountNumber.trim();
+    if (!acc) return false;
+    return [...entries, ...done].some((e) => e.accountNumber.trim() === acc && e.id !== editingId);
+  }, [form.accountNumber, entries, done, editingId]);
 
   const filteredEntries = useMemo(() => {
     const q = searchEntries.trim().toLowerCase();
@@ -161,6 +189,12 @@ function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.address]);
 
+  useEffect(() => {
+    if (branchManual) return;
+    const b = computeBranch(form.address);
+    if (b) setForm((f) => (f.branch === b ? f : { ...f, branch: b }));
+  }, [form.address, branchManual]);
+
   const update = <K extends keyof Entry>(k: K, v: Entry[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
@@ -174,6 +208,8 @@ function Index() {
       toast.success("تم تعديل البيانات");
       setEditingId(null);
       setForm(emptyEntry());
+      setBranchManual(false);
+      setPlumberMode("known");
       setTab("entries");
       return;
     } else {
@@ -181,12 +217,16 @@ function Index() {
       toast.success("تم ترحيل البيانات");
     }
     setForm(emptyEntry());
+    setBranchManual(false);
+    setPlumberMode("known");
     if (settings.autoNavigateAfterSubmit) setTab("entries");
   };
 
   const handleEdit = (e: Entry) => {
     setForm(e);
     setEditingId(e.id);
+    setBranchManual(true);
+    setPlumberMode((KNOWN_PLUMBERS as readonly string[]).includes(e.plumber) ? "known" : "other");
     setTab("entry");
   };
 
@@ -204,6 +244,54 @@ function Index() {
     setEntries((arr) => [...arr, e]);
     setDone((d) => d.filter((x) => x.id !== e.id));
     toast.success("تم إرجاع السطر للمدخلات");
+  };
+
+  const importExcel = async (file: File) => {
+    try {
+      const XLSX = await import("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+      const pick = (r: Record<string, any>, keys: string[]) => {
+        for (const k of keys) {
+          const found = Object.keys(r).find((rk) => rk.trim() === k);
+          if (found && r[found] !== undefined && r[found] !== null && r[found] !== "") return String(r[found]);
+        }
+        return "";
+      };
+      const valid: AccountingType[] = ["منزلي","تجاري","حكومي","كبار مشتركين","أخرى"];
+      const imported: Entry[] = rows.map((r) => {
+        const address = pick(r, ["العنوان"]);
+        const branch = pick(r, ["الفرع"]) || computeBranch(address);
+        const accType = pick(r, ["نوع المحاسبة"]) as AccountingType;
+        return {
+          id: crypto.randomUUID(),
+          name: pick(r, ["الاسم"]),
+          cardNumber: pick(r, ["رقم البطاقة", "رقم البطاقه"]),
+          address,
+          branch,
+          accountNumber: pick(r, ["رقم الحساب"]),
+          sewage: pick(r, ["الخضوع للصرف"]) || computeSewage(address),
+          units: pick(r, ["عدد الوحدات"]) || "1",
+          meterOpenDate: pick(r, ["تاريخ فتح العداد"]),
+          accountingType: valid.includes(accType) ? accType : "أخرى",
+          bronzeNumber: pick(r, ["رقم البرونز"]),
+          installDate: pick(r, ["تاريخ التركيب"]),
+          mobile: pick(r, ["رقم الموبايل", "الموبايل"]),
+          plumber: pick(r, ["السباك"]) || "الجميل",
+          couponNumber: pick(r, ["رقم القسيمة"]) || "0",
+          couponAmount: pick(r, ["بند مبلغ القسيمة", "مبلغ القسيمة"]) || "0",
+          notes: pick(r, ["ملاحظات"]),
+        };
+      }).filter((e) => e.name || e.accountNumber || e.cardNumber);
+      if (!imported.length) return toast.error("لم يتم العثور على بيانات");
+      setEntries((arr) => [...arr, ...imported]);
+      toast.success(`تم استيراد ${imported.length} سجل`);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل استيراد الملف");
+    }
   };
 
   const tableRows = (list: Entry[]) =>
@@ -329,10 +417,23 @@ function Index() {
                   <Input value={form.address} onChange={(e) => update("address", e.target.value)} />
                 </Field>
                 <Field label="الفرع">
-                  <Input value={form.branch} onChange={(e) => update("branch", e.target.value)} placeholder="مثال: 1 أو 20" />
+                  <Input
+                    value={form.branch}
+                    onChange={(e) => { setBranchManual(true); update("branch", e.target.value); }}
+                    placeholder={branchAuto ? `تلقائي: ${branchAuto}` : "مثال: 1 أو 20"}
+                  />
                 </Field>
                 <Field label="رقم الحساب">
-                  <Input value={form.accountNumber} onChange={(e) => update("accountNumber", e.target.value)} />
+                  <div className="space-y-1">
+                    <Input
+                      value={form.accountNumber}
+                      onChange={(e) => update("accountNumber", e.target.value)}
+                      className={duplicateAccount ? "border-red-500 focus-visible:ring-red-500" : ""}
+                    />
+                    {duplicateAccount && (
+                      <p className="text-xs text-red-600 font-medium">⚠ رقم الحساب مكرر — موجود مسبقاً</p>
+                    )}
+                  </div>
                 </Field>
                 <Field label="الخضوع للصرف (تلقائي)">
                   <Input value={sewageAuto} readOnly className="bg-muted" />
@@ -369,13 +470,34 @@ function Index() {
                   />
                 </Field>
                 <Field label="السباك">
-                  <Select value={form.plumber} onValueChange={(v) => update("plumber", v as Plumber)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="الجميل">الجميل</SelectItem>
-                      <SelectItem value="ابوزيد">ابوزيد</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1">
+                    <Select
+                      value={plumberMode === "other" ? "__other__" : form.plumber}
+                      onValueChange={(v) => {
+                        if (v === "__other__") {
+                          setPlumberMode("other");
+                          update("plumber", "");
+                        } else {
+                          setPlumberMode("known");
+                          update("plumber", v);
+                        }
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="الجميل">الجميل</SelectItem>
+                        <SelectItem value="ابوزيد">ابوزيد</SelectItem>
+                        <SelectItem value="__other__">أخرى (إدخال يدوي)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {plumberMode === "other" && (
+                      <Input
+                        placeholder="اسم السباك"
+                        value={form.plumber}
+                        onChange={(e) => update("plumber", e.target.value)}
+                      />
+                    )}
+                  </div>
                 </Field>
                 <Field label="رقم القسيمة">
                   <Input value={form.couponNumber} onChange={(e) => update("couponNumber", e.target.value)} />
@@ -415,6 +537,21 @@ function Index() {
                   />
                 </div>
                 <div className="flex gap-2">
+                  <label className="inline-flex">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) importExcel(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <span className="inline-flex h-8 cursor-pointer items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
+                      <FileSpreadsheet className="ms-1 h-4 w-4" /> استيراد Excel
+                    </span>
+                  </label>
                   <Button variant="outline" size="sm" onClick={() => exportExcel(filteredEntries, "المدخلات")} disabled={!filteredEntries.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
