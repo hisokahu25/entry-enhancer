@@ -417,10 +417,23 @@ function Index() {
                   <Input value={form.address} onChange={(e) => update("address", e.target.value)} />
                 </Field>
                 <Field label="الفرع">
-                  <Input value={form.branch} onChange={(e) => update("branch", e.target.value)} placeholder="مثال: 1 أو 20" />
+                  <Input
+                    value={form.branch}
+                    onChange={(e) => { setBranchManual(true); update("branch", e.target.value); }}
+                    placeholder={branchAuto ? `تلقائي: ${branchAuto}` : "مثال: 1 أو 20"}
+                  />
                 </Field>
                 <Field label="رقم الحساب">
-                  <Input value={form.accountNumber} onChange={(e) => update("accountNumber", e.target.value)} />
+                  <div className="space-y-1">
+                    <Input
+                      value={form.accountNumber}
+                      onChange={(e) => update("accountNumber", e.target.value)}
+                      className={duplicateAccount ? "border-red-500 focus-visible:ring-red-500" : ""}
+                    />
+                    {duplicateAccount && (
+                      <p className="text-xs text-red-600 font-medium">⚠ رقم الحساب مكرر — موجود مسبقاً</p>
+                    )}
+                  </div>
                 </Field>
                 <Field label="الخضوع للصرف (تلقائي)">
                   <Input value={sewageAuto} readOnly className="bg-muted" />
@@ -457,13 +470,34 @@ function Index() {
                   />
                 </Field>
                 <Field label="السباك">
-                  <Select value={form.plumber} onValueChange={(v) => update("plumber", v as Plumber)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="الجميل">الجميل</SelectItem>
-                      <SelectItem value="ابوزيد">ابوزيد</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1">
+                    <Select
+                      value={plumberMode === "other" ? "__other__" : form.plumber}
+                      onValueChange={(v) => {
+                        if (v === "__other__") {
+                          setPlumberMode("other");
+                          update("plumber", "");
+                        } else {
+                          setPlumberMode("known");
+                          update("plumber", v);
+                        }
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="الجميل">الجميل</SelectItem>
+                        <SelectItem value="ابوزيد">ابوزيد</SelectItem>
+                        <SelectItem value="__other__">أخرى (إدخال يدوي)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {plumberMode === "other" && (
+                      <Input
+                        placeholder="اسم السباك"
+                        value={form.plumber}
+                        onChange={(e) => update("plumber", e.target.value)}
+                      />
+                    )}
+                  </div>
                 </Field>
                 <Field label="رقم القسيمة">
                   <Input value={form.couponNumber} onChange={(e) => update("couponNumber", e.target.value)} />
