@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
 });
 
 type AccountingType = "منزلي" | "تجاري" | "حكومي" | "كبار مشتركين" | "أخرى";
-type Plumber = "الجميل" | "ابوزيد";
+const KNOWN_PLUMBERS = ["الجميل", "ابوزيد"] as const;
 
 interface Entry {
   id: string;
@@ -45,7 +45,7 @@ interface Entry {
   bronzeNumber: string;
   installDate: string;
   mobile: string;
-  plumber: Plumber;
+  plumber: string;
   couponNumber: string;
   couponAmount: string;
   notes: string;
@@ -60,6 +60,25 @@ interface Settings {
 }
 const defaultSettings: Settings = { autoNavigateAfterSubmit: false };
 
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+const BRANCH_RULES: { branch: string; keywords: string[] }[] = [
+  { branch: "1", keywords: ["اسكان الشباب", "إسكان الشباب", "المروة", "المروه", "شجرة الدر", "شجره الدر", "بن لقمان", "موتيلات بن لقمان", "صلاح الدين"] },
+  { branch: "2", keywords: ["الصفا", "الاندلس", "الأندلس", "امون", "آمون", "أمون", "الفردوس", "جزيرة الورد", "جزيره الورد"] },
+  { branch: "3", keywords: ["الكرنك", "ابوسمبل", "أبوسمبل", "ابو سمبل", "ايزيس", "إيزيس", "جمصة 1", "جمصة 2", "جمصة 3", "جمصة 4", "جمصة1", "جمصة2", "جمصة3", "جمصة4", "جمصه 1", "جمصه 2", "جمصه 3", "جمصه 4"] },
+  { branch: "4", keywords: ["مايو", "البستان", "الياسمين", "العاشر", "النقابات", "القرية السياحية", "القريه السياحيه"] },
+  { branch: "5", keywords: ["زايد"] },
+];
+
+function computeBranch(address: string): string {
+  const a = (address || "").trim();
+  if (!a) return "";
+  for (const rule of BRANCH_RULES) {
+    if (rule.keywords.some((k) => a.includes(k))) return rule.branch;
+  }
+  return "";
+}
+
 const emptyEntry = (): Entry => ({
   id: crypto.randomUUID(),
   name: "",
@@ -72,7 +91,7 @@ const emptyEntry = (): Entry => ({
   meterOpenDate: "",
   accountingType: "أخرى",
   bronzeNumber: "",
-  installDate: "",
+  installDate: todayISO(),
   mobile: "",
   plumber: "الجميل",
   couponNumber: "0",
