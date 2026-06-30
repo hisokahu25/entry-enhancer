@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast, Toaster } from "sonner";
 import { Pencil, Copy, FileDown, FileSpreadsheet, CheckCircle2, Undo2, Settings as SettingsIcon, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { db, defaultSettings, type Settings } from "@/lib/db";
+import type { Entry, AccountingType } from "@/lib/entry-types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,37 +30,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type AccountingType = "منزلي" | "تجاري" | "حكومي" | "كبار مشتركين" | "أخرى";
 const KNOWN_PLUMBERS = ["الجميل", "ابوزيد"] as const;
-
-interface Entry {
-  id: string;
-  name: string;
-  cardNumber: string;
-  address: string;
-  branch: string;
-  accountNumber: string;
-  sewage: string;
-  units: string;
-  meterOpenDate: string;
-  accountingType: AccountingType;
-  bronzeNumber: string;
-  installDate: string;
-  mobile: string;
-  plumber: string;
-  couponNumber: string;
-  couponAmount: string;
-  notes: string;
-}
-
-const STORAGE = "subscribers_v1";
-const STORAGE_DONE = "subscribers_done_v1";
-const STORAGE_SETTINGS = "subscribers_settings_v1";
-
-interface Settings {
-  autoNavigateAfterSubmit: boolean;
-}
-const defaultSettings: Settings = { autoNavigateAfterSubmit: false };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -126,25 +98,26 @@ function Index() {
   const [plumberMode, setPlumberMode] = useState<"known" | "other">("known");
 
   useEffect(() => {
-    try {
-      const a = localStorage.getItem(STORAGE);
-      const b = localStorage.getItem(STORAGE_DONE);
-      const s = localStorage.getItem(STORAGE_SETTINGS);
-      if (a) setEntries(JSON.parse(a));
-      if (b) setDone(JSON.parse(b));
-      if (s) setSettings({ ...defaultSettings, ...JSON.parse(s) });
-    } catch {}
+    (async () => {
+      try {
+        const { entries, done } = await db.loadAll();
+        setEntries(entries);
+        setDone(done);
+        setSettings(await db.loadSettings());
+      } catch (e) { console.error(e); }
+    })();
   }, []);
 
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { setLoaded(true); }, []);
   useEffect(() => {
-    localStorage.setItem(STORAGE, JSON.stringify(entries));
-  }, [entries]);
+    if (!loaded) return;
+    db.saveAll(entries, done).catch((e) => console.error("save failed", e));
+  }, [entries, done, loaded]);
   useEffect(() => {
-    localStorage.setItem(STORAGE_DONE, JSON.stringify(done));
-  }, [done]);
-  useEffect(() => {
-    localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings));
-  }, [settings]);
+    if (!loaded) return;
+    db.saveSettings(settings).catch(() => {});
+  }, [settings, loaded]);
 
   const sewageAuto = useMemo(() => computeSewage(form.address), [form.address]);
   const branchAuto = useMemo(() => computeBranch(form.address), [form.address]);
