@@ -246,7 +246,16 @@ function Index() {
     toast.success("تم إرجاع السطر للمدخلات");
   };
 
-  const importExcel = async (file: File) => {
+  const finishAll = () => {
+    if (!filteredEntries.length) return;
+    if (!confirm(`هل تريد إنهاء كل المدخلات (${filteredEntries.length}) دفعة واحدة؟`)) return;
+    const ids = new Set(filteredEntries.map((e) => e.id));
+    setDone((d) => [...d, ...filteredEntries]);
+    setEntries((arr) => arr.filter((e) => !ids.has(e.id)));
+    toast.success("تم نقل المدخلات إلى تم الانتهاء");
+  };
+
+  const importExcel = async (file: File, target: "entries" | "done" = "entries") => {
     try {
       const XLSX = await import("xlsx");
       const buf = await file.arrayBuffer();
@@ -286,8 +295,13 @@ function Index() {
         };
       }).filter((e) => e.name || e.accountNumber || e.cardNumber);
       if (!imported.length) return toast.error("لم يتم العثور على بيانات");
-      setEntries((arr) => [...arr, ...imported]);
-      toast.success(`تم استيراد ${imported.length} سجل`);
+      if (target === "done") {
+        setDone((arr) => [...arr, ...imported]);
+        toast.success(`تم استيراد ${imported.length} سجل إلى تم الانتهاء`);
+      } else {
+        setEntries((arr) => [...arr, ...imported]);
+        toast.success(`تم استيراد ${imported.length} سجل`);
+      }
     } catch (err) {
       console.error(err);
       toast.error("فشل استيراد الملف");
