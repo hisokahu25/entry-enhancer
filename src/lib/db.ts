@@ -18,8 +18,7 @@ let dbPromise: Promise<Db> | null = null;
 async function getDb(): Promise<Db> {
   if (!dbPromise) {
     dbPromise = (async () => {
-      const mod = await import("@tauri-apps/plugin-sql");
-      // @ts-expect-error - default export type
+      const mod: any = await import("@tauri-apps/plugin-sql");
       const Database = mod.default ?? mod;
       return (await Database.load("sqlite:subscribers.db")) as Db;
     })();
