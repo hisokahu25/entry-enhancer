@@ -558,7 +558,7 @@ function Index() {
                       className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
-                        if (f) importExcel(f);
+                        if (f) importExcel(f, "entries");
                         e.target.value = "";
                       }}
                     />
@@ -566,6 +566,9 @@ function Index() {
                       <FileSpreadsheet className="ms-1 h-4 w-4" /> استيراد Excel
                     </span>
                   </label>
+                  <Button variant="outline" size="sm" onClick={finishAll} disabled={!filteredEntries.length}>
+                    <CheckCircle2 className="ms-1 h-4 w-4" /> إنهاء الكل
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => exportExcel(filteredEntries, "المدخلات")} disabled={!filteredEntries.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
@@ -599,6 +602,21 @@ function Index() {
                   />
                 </div>
                 <div className="flex gap-2">
+                  <label className="inline-flex">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) importExcel(f, "done");
+                        e.target.value = "";
+                      }}
+                    />
+                    <span className="inline-flex h-8 cursor-pointer items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
+                      <FileSpreadsheet className="ms-1 h-4 w-4" /> استيراد Excel
+                    </span>
+                  </label>
                   <Button variant="outline" size="sm" onClick={() => exportExcel(filteredDone, "تم_الانتهاء")} disabled={!filteredDone.length}>
                     <FileSpreadsheet className="ms-1 h-4 w-4" /> Excel
                   </Button>
