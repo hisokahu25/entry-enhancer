@@ -608,6 +608,10 @@ function Index() {
             <Card>
               <CardHeader><CardTitle>الإعدادات</CardTitle></CardHeader>
               <CardContent className="space-y-4" dir="rtl">
+                <div className="rounded-md border p-4 text-right text-sm">
+                  <div className="font-semibold mb-1">قاعدة البيانات الحالية</div>
+                  <div className="text-muted-foreground">{db.backend}</div>
+                </div>
                 <div className="flex items-center justify-between rounded-md border p-4">
                   <div className="space-y-1 text-right">
                     <Label className="text-base">الانتقال التلقائي لتاب المدخلات بعد الترحيل</Label>
